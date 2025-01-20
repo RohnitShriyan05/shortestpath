@@ -11,23 +11,59 @@
 
         .doto {
             font-family: "Doto", serif;
-            font-optical-sizing: auto;
-            font-weight: 400;
-            font-style: normal;
-            font-variation-settings:
-                "ROND" 0;
         }
 
-        .silk {
+        .silkscreen-bold {
             font-family: "Silkscreen", serif;
-            font-weight: 400;
+            font-weight: 700;
             font-style: normal;
         }
+        .nav{
+            background-image: url("https://cdn.pfps.gg/banners/5132-pixel-mario.gif");
+            background-color: #ef4444;
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+        .cell {
+            transition: background-color 0.3s;
+        }
 
-        .play {
-            font-family: "Play", serif;
-            font-weight: 400;
-            font-style: normal;
+        .start {
+            background-image: url("./mario.png");
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        .end {
+            background-image: url("./princess.png");
+            
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+
+        .wall {
+            background-image: url("./tree.png");
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        .path {
+            background-image: url("https://static.vecteezy.com/system/resources/thumbnails/002/948/764/small/pixel-background-the-concept-of-games-background-vector.jpg");
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        .visited {
+            background-image: url("https://static.vecteezy.com/system/resources/thumbnails/002/948/764/small/pixel-background-the-concept-of-games-background-vector.jpg");
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
         }
     </style>
 </head>
@@ -36,28 +72,138 @@
     <header class="bg-black text-white py-4 sticky top-0 border-b border-neutral-500 z-40">
         <nav class="container mx-auto px-4 doto flex gap-12 items-center z-40 h-min">
             <h1 class="lg:text-3xl text-xl font-bold flex-1">SHORTEST PATHS</h1>
-            <h1 class=" text-xs font-bold text-gray-500">By Rohnit Shriyan</h1>
+            <h1 class="text-xs font-bold text-white">By Rohnit Shriyan</h1>
         </nav>
     </header>
-    <main class="container mx-auto py-8 flex-1 w-full flex flex-col gap-10 snap-y snap-proximity items-center justify-center">
-        <section class="sm:h-2/3 h-1/2  aspect-square bg-black border border-2 grid-cols-10 grid-rows-10 place-items-center">
-            <div class="w-full h-full border"/>
-            <div class="w-full h-full border"/>
-            <div class="w-full h-full border"/>
+    <main
+        class="container mx-auto py-8 flex-1 w-full flex flex-col gap-10 snap-y snap-proximity items-center justify-center">
+        <p id="instruction" class="text-2xl text-white silkscreen-bold">Select Start Node</p>
+        <section id="grid" class="sm:h-2/3 h-1/2 aspect-square grid grid-cols-10 grid-rows-10 place-items-center gap-[2px]">
+            <!-- Grid cells will be dynamically created -->
         </section>
     </main>
-
 
     <footer class="text-white py-4 sticky bottom-0 z-40">
         <div class="container mx-auto px-4 text-center flex items-center justify-center">
             <div
                 class="doto px-6 w-full sm:w-3/4 md:w-1/2 lg:w-1/4 bg-black/[0.75] grid grid-cols-2 place-items-center gap-4 sm:gap-12 border border-neutral-500 p-3 lg:text-xl sm:text-lg text-base">
-                <div class="font-bold w-full h-full flex gap-4"><button class="hover:text-red-500"><</button><p>DIJSTRAS</p><button class="hover:text-red-500">></button></div>
-                <button class="font-bold w-full h-full bg-red-500">RUN</button>
+                <div class="font-bold w-full h-full flex gap-4">
+                    <button id="prev-algo" class="hover:text-red-500">< </button>
+                            <p id="algo-name">DIJKSTRA</p>
+                            <button id="next-algo" class="hover:text-red-500">></button>
+                </div>
+                <button id="run-btn" class="font-bold w-full h-full bg-red-500">RUN</button>
             </div>
         </div>
     </footer>
 
+    <script>
+        const gridContainer = document.getElementById("grid");
+        const instruction = document.getElementById("instruction");
+        const runButton = document.getElementById("run-btn");
+        const gridSize = 10;
+        const grid = [];
+        let startNode = null;
+        let endNode = null;
+
+        // Initialize grid
+        for (let row = 0; row < gridSize; row++) {
+            const rowArray = [];
+            for (let col = 0; col < gridSize; col++) {
+                const cell = document.createElement("div");
+                cell.classList.add("w-full", "h-full", "border", "border-neutral-400", "cell");
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                cell.addEventListener("click", () => handleCellClick(cell));
+                gridContainer.appendChild(cell);
+                rowArray.push({ row, col, isWall: false, distance: Infinity, previous: null, visited: false });
+            }
+            grid.push(rowArray);
+        }
+
+        function handleCellClick(cell) {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            if (!startNode) {
+                instruction.innerHTML = "Select End Node"
+                startNode = grid[row][col];
+                cell.classList.add("start");
+            } else if (!endNode) {
+                instruction.innerHTML = "Add Walls"
+                endNode = grid[row][col];
+                cell.classList.add("end");
+            } else {
+                const node = grid[row][col];
+                node.isWall = !node.isWall;
+                cell.classList.toggle("wall");
+            }
+        }
+
+        async function dijkstra() {
+            instruction.innerHTML = "Running Simulation";
+            const unvisitedNodes = [];
+            startNode.distance = 0;
+            grid.flat().forEach(node => unvisitedNodes.push(node));
+
+            while (unvisitedNodes.length) {
+                unvisitedNodes.sort((a, b) => a.distance - b.distance);
+                const closestNode = unvisitedNodes.shift();
+
+                if (closestNode.isWall) continue;
+                if (closestNode.distance === Infinity) break;
+
+                closestNode.visited = true;
+                const cell = document.querySelector(`[data-row='${closestNode.row}'][data-col='${closestNode.col}']`);
+                if (closestNode !== startNode && closestNode !== endNode) {
+                    cell.classList.add("visited");
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Reduced delay to 500ms
+                }
+
+                if (closestNode === endNode) {
+                    return await backtrackPath();
+                }
+
+                const neighbors = getNeighbors(closestNode);
+                neighbors.forEach(neighbor => {
+                    if (!neighbor.visited && !neighbor.isWall) {
+                        const newDist = closestNode.distance + 1;
+                        if (newDist < neighbor.distance) {
+                            neighbor.distance = newDist;
+                            neighbor.previous = closestNode;
+                        }
+                    }
+                });
+            }
+        }
+
+        function getNeighbors(node) {
+            const { row, col } = node;
+            const neighbors = [];
+            if (row > 0) neighbors.push(grid[row - 1][col]);
+            if (row < gridSize - 1) neighbors.push(grid[row + 1][col]);
+            if (col > 0) neighbors.push(grid[row][col - 1]);
+            if (col < gridSize - 1) neighbors.push(grid[row][col + 1]);
+            return neighbors;
+        }
+
+        async function backtrackPath() {
+            instruction.innerHTML = "Completed!";
+            let currentNode = endNode;
+            while (currentNode !== null) {
+                const cell = document.querySelector(`[data-row='${currentNode.row}'][data-col='${currentNode.col}']`);
+                if (currentNode !== startNode && currentNode !== endNode) {
+                    cell.classList.add("path");
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Reduced delay to 250ms
+                }
+                currentNode = currentNode.previous;
+            }
+        }
+
+        runButton.addEventListener("click", () => {
+            if (startNode && endNode) dijkstra();
+        });
+    </script>
 </body>
 
 </html>
